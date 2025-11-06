@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego Didáctico: Sistema Respiratorio</title>
+    <!-- Carga de Tailwind CSS para un diseño moderno y responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fuente principal y estilos de fondo */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff; /* Azul muy claro */
+        }
+        /* Estilos base para las zonas de arrastre */
+        .drop-zone {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px dashed #00bfff; /* Borde de zona de espera */
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #1e40af;
+            text-align: center;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        /* Estilo al pasar el ratón por encima de una zona de arrastre */
+        .drop-zone.hover {
+            background-color: rgba(0, 191, 255, 0.2);
+            border-color: #00bfff;
+        }
+        /* Estilo para las etiquetas arrastrables */
+        .draggable-item {
+            cursor: grab;
+            user-select: none;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            background-color: #3b82f6; /* Azul primario */
+            color: white;
+            border-radius: 9999px; /* Píldora */
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.15s ease-out, background-color 0.3s;
+        }
+        .draggable-item:active {
+            transform: scale(0.95);
+            cursor: grabbing;
+        }
+        /* Estilos de retroalimentación */
+        .correct {
+            background-color: #34d399 !important; /* Verde */
+            border-color: #059669 !important;
+            color: white !important;
+            animation: pulse-green 0.5s 1;
+        }
+        .incorrect {
+            background-color: #f87171 !important; /* Rojo */
+            border-color: #ef4444 !important;
+            animation: shake 0.5s;
+        }
+        .hidden-label {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0);
+        }
+
+        /* Animación para retroalimentación visual */
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        /* Responsive layout for the diagram and labels */
+        @media (min-width: 1024px) {
+            #game-area {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-around;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl p-6 md:p-10 border-t-8 border-blue-500">
+        <!-- Título e Instrucciones -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 mb-2">
+                ¡Evalúa tu Conocimiento del Sistema Respiratorio!
+            </h1>
+            <p class="text-lg text-gray-500">
+                Arrastra y suelta cada parte anatómica a su ubicación correcta en el diagrama.
+            </p>
+            <div id="score-display" class="mt-4 text-xl font-bold text-blue-600">
+                Aciertos: 0 / 7
+            </div>
+        </header>
+
+        <div id="game-area" class="flex flex-col lg:flex-row gap-8">
+            
+            <!-- 1. Contenedor del Diagrama (Drop Zones) -->
+            <div id="diagram-container" class="relative flex-shrink-0 w-full lg:w-1/2 h-96 lg:h-[500px] bg-gray-100 rounded-xl shadow-inner p-2 border-2 border-gray-300">
+                
+                <!-- Imagen/Placeholder del Diagrama -->
+                <img src="https://placehold.co/400x500/A0E7E5/000000?text=Diagrama+del+Sistema+Respiratorio" 
+                     alt="Diagrama esquemático del sistema respiratorio" 
+                     class="w-full h-full object-contain rounded-lg pointer-events-none">
+
+                <!-- ZONAS DE ARRASTRE (Drop Zones) - Posicionadas sobre la imagen (adaptar si se cambia la imagen) -->
+                
+                <!-- Nariz / Nasal Cavity (Superior entrada de aire) -->
+                <div id="zone-nariz" data-target="Nariz" class="drop-zone w-24 h-8 top-5 left-1/2 -translate-x-1/2">Nariz</div>
+                
+                <!-- Faringe / Pharynx (Garganta/zona detrás de la nariz) -->
+                <div id="zone-faringe" data-target="Faringe" class="drop-zone w-24 h-8 top-16 left-1/2 -translate-x-1/2">Faringe</div>
+                
+                <!-- Laringe / Larynx (Caja de voz, arriba de la tráquea) -->
+                <div id="zone-laringe" data-target="Laringe" class="drop-zone w-24 h-8 top-32 left-1/2 -translate-x-1/2">Laringe</div>
+                
+                <!-- Tráquea / Trachea (Tubo central) -->
+                <div id="zone-traquea" data-target="Tráquea" class="drop-zone w-32 h-8 top-48 left-1/2 -translate-x-1/2">Tráquea</div>
+
+                <!-- Bronquios / Bronchi (Ramificaciones dentro del pulmón) -->
+                <div id="zone-bronquios" data-target="Bronquios" class="drop-zone w-28 h-8 top-64 left-1/4">Bronquios</div>
+                
+                <!-- Pulmones / Lungs (El órgano principal, lateral) -->
+                <div id="zone-pulmones" data-target="Pulmones" class="drop-zone w-28 h-8 top-72 right-1/4">Pulmones</div>
+
+                <!-- Diafragma / Diaphragm (Músculo inferior) -->
+                <div id="zone-diafragma" data-target="Diafragma" class="drop-zone w-32 h-8 bottom-5 left-1/2 -translate-x-1/2">Diafragma</div>
+
+            </div>
+
+            <!-- 2. Contenedor de Etiquetas (Draggable Items) -->
+            <div class="lg:w-1/2 w-full">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Etiquetas disponibles:</h2>
+                <div id="labels-container" class="flex flex-wrap gap-2 justify-center lg:justify-start">
+                    
+                    <!-- Elementos Arrastrables -->
+                    <div id="Nariz" data-name="Nariz" draggable="true" class="draggable-item">Nariz</div>
+                    <div id="Faringe" data-name="Faringe" draggable="true" class="draggable-item">Faringe</div>
+                    <div id="Laringe" data-name="Laringe" draggable="true" class="draggable-item">Laringe</div>
+                    <div id="Tráquea" data-name="Tráquea" draggable="true" class="draggable-item">Tráquea</div>
+                    <div id="Bronquios" data-name="Bronquios" draggable="true" class="draggable-item">Bronquios</div>
+                    <div id="Pulmones" data-name="Pulmones" draggable="true" class="draggable-item">Pulmones</div>
+                    <div id="Diafragma" data-name="Diafragma" draggable="true" class="draggable-item">Diafragma</div>
+                    
+                </div>
+                
+                <!-- Botón de Reinicio -->
+                <div class="mt-8 text-center lg:text-left">
+                    <button id="reset-button" class="px-6 py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-full shadow-lg transition duration-200">
+                        Reiniciar Juego
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal de Resultado (oculto por defecto) -->
+        <div id="result-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl p-8 max-w-sm w-full text-center shadow-2xl transform transition-transform scale-90">
+                <h3 id="modal-title" class="text-3xl font-extrabold text-green-600 mb-4"></h3>
+                <p id="modal-message" class="text-lg text-gray-700 mb-6"></p>
+                <button id="close-modal" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-full shadow-md">
+                    ¡Entendido!
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Configuración de variables globales
+        let draggedItem = null;
+        let correctCount = 0;
+        const totalItems = 7;
+        const scoreDisplay = document.getElementById('score-display');
+        const labelsContainer = document.getElementById('labels-container');
+        const dropZones = document.querySelectorAll('.drop-zone');
+        const resetButton = document.getElementById('reset-button');
+        const resultModal = document.getElementById('result-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const closeModal = document.getElementById('close-modal');
+
+        // --- Funciones de Drag and Drop ---
+
+        /**
+         * Maneja el inicio del arrastre de una etiqueta.
+         * @param {DragEvent} e 
+         */
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            e.dataTransfer.setData('text/plain', e.target.dataset.name);
+            setTimeout(() => {
+                e.target.classList.add('opacity-50'); // Reduce opacidad del original
+            }, 0);
+        }
+
+        /**
+         * Permite que el elemento sea soltado en la zona.
+         * @param {DragEvent} e 
+         */
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        /**
+         * Maneja cuando el arrastrable entra en la zona.
+         * @param {DragEvent} e 
+         */
+        function handleDragEnter(e) {
+            e.target.classList.add('hover');
+        }
+
+        /**
+         * Maneja cuando el arrastrable sale de la zona.
+         * @param {DragEvent} e 
+         */
+        function handleDragLeave(e) {
+            e.target.classList.remove('hover');
+        }
+
+        /**
+         * Maneja la acción de soltar el elemento.
+         * @param {DragEvent} e 
+         */
+        function handleDrop(e) {
+            e.preventDefault();
+            const dropZone = e.currentTarget;
+            const targetName = dropZone.dataset.target;
+            const draggedName = e.dataTransfer.getData('text/plain');
+
+            // Limpiar estilos hover
+            dropZone.classList.remove('hover');
+            draggedItem.classList.remove('opacity-50');
+
+            // Verificar si la zona ya está llena o si el arrastre es válido
+            if (dropZone.dataset.filled === 'true') {
+                // Ya hay un elemento, ignorar
+                showFeedback(false, dropZone);
+                return;
+            }
+
+            // Lógica de acierto/error
+            if (draggedName === targetName) {
+                // --- CORRECTO ---
+                
+                // 1. Marcar la zona como correcta y ocupada
+                dropZone.classList.add('correct');
+                dropZone.classList.remove('incorrect');
+                dropZone.dataset.filled = 'true';
+                
+                // 2. Mover la etiqueta arrastrada a la posición de la zona
+                draggedItem.style.position = 'absolute';
+                draggedItem.style.top = '0';
+                draggedItem.style.left = '0';
+                draggedItem.style.margin = '0';
+                draggedItem.classList.remove('draggable-item'); // Quitar estilos de arrastrable
+
+                // 3. Reemplazar el contenido de la zona con la etiqueta
+                dropZone.innerHTML = ''; 
+                dropZone.appendChild(draggedItem);
+
+                // 4. Deshabilitar futuras interacciones con este elemento
+                draggedItem.setAttribute('draggable', 'false');
+                draggedItem.removeEventListener('dragstart', handleDragStart);
+
+                // 5. Actualizar la puntuación
+                correctCount++;
+                updateScore();
+                
+                showFeedback(true, dropZone);
+
+            } else {
+                // --- INCORRECTO ---
+                showFeedback(false, dropZone);
+            }
+        }
+
+        /**
+         * Muestra una retroalimentación visual (rojo/verde)
+         * @param {boolean} isCorrect 
+         * @param {HTMLElement} element 
+         */
+        function showFeedback(isCorrect, element) {
+            if (isCorrect) {
+                // La retroalimentación de éxito es la clase 'correct' aplicada en handleDrop
+            } else {
+                // Retroalimentación de error: animar la zona de arrastre
+                element.classList.add('incorrect');
+                setTimeout(() => {
+                    element.classList.remove('incorrect');
+                }, 500);
+            }
+        }
+
+        /**
+         * Actualiza el contador de aciertos y verifica la victoria.
+         */
+        function updateScore() {
+            scoreDisplay.textContent = `Aciertos: ${correctCount} / ${totalItems}`;
+
+            if (correctCount === totalItems) {
+                // Juego completado
+                showResultModal(true);
+            }
+        }
+
+        /**
+         * Muestra el modal de resultado final.
+         * @param {boolean} isWin 
+         */
+        function showResultModal(isWin) {
+            if (isWin) {
+                modalTitle.textContent = "¡Felicidades, Evaluación Superada!";
+                modalMessage.textContent = "¡Has etiquetado correctamente todas las partes del sistema respiratorio! Tu precisión es del 100%.";
+                modalTitle.classList.replace('text-red-600', 'text-green-600');
+            } else {
+                // Esto solo se usaría si tuviéramos un botón de 'terminar' incompleto
+                modalTitle.textContent = "Resultado Parcial";
+                modalMessage.textContent = `Tienes ${correctCount} de ${totalItems} correctos. ¡Sigue practicando!`;
+                modalTitle.classList.replace('text-green-600', 'text-red-600');
+            }
+            resultModal.classList.remove('hidden');
+            resultModal.classList.add('flex');
+            document.querySelector('#result-modal > div').classList.remove('scale-90');
+        }
+
+
+        // --- Inicialización y Event Listeners ---
+
+        /**
+         * Función para configurar todos los listeners iniciales y reiniciar el juego
+         */
+        function initializeGame() {
+            // Reiniciar contadores y estado
+            correctCount = 0;
+            updateScore();
+
+            // 1. Configurar Draggable Items
+            const draggableItems = document.querySelectorAll('.draggable-item');
+            
+            // Si ya hay elementos, remover listeners antes de reasignarlos (para el reset)
+            draggableItems.forEach(item => {
+                item.removeEventListener('dragstart', handleDragStart);
+            });
+
+            // Recrear los elementos arrastrables para restaurar el estado DOM
+            labelsContainer.innerHTML = '';
+            const labelsData = [
+                { id: "Nariz", name: "Nariz" },
+                { id: "Faringe", name: "Faringe" },
+                { id: "Laringe", name: "Laringe" },
+                { id: "Tráquea", name: "Tráquea" },
+                { id: "Bronquios", name: "Bronquios" },
+                { id: "Pulmones", name: "Pulmones" },
+                { id: "Diafragma", name: "Diafragma" }
+            ];
+
+            // Re-generar y adjuntar listeners
+            labelsData.forEach(data => {
+                const div = document.createElement('div');
+                div.id = data.id;
+                div.dataset.name = data.name;
+                div.setAttribute('draggable', 'true');
+                div.className = 'draggable-item';
+                div.textContent = data.name;
+                div.addEventListener('dragstart', handleDragStart);
+                labelsContainer.appendChild(div);
+            });
+            
+            // 2. Configurar Drop Zones
+            dropZones.forEach(zone => {
+                zone.removeEventListener('dragover', handleDragOver);
+                zone.removeEventListener('drop', handleDrop);
+                zone.removeEventListener('dragenter', handleDragEnter);
+                zone.removeEventListener('dragleave', handleDragLeave);
+
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('drop', handleDrop);
+                zone.addEventListener('dragenter', handleDragEnter);
+                zone.addEventListener('dragleave', handleDragLeave);
+
+                // Limpiar estilos y estado de la zona
+                zone.classList.remove('correct', 'incorrect');
+                zone.dataset.filled = 'false';
+                zone.innerHTML = zone.dataset.target; // Restaurar texto original (la parte a etiquetar)
+            });
+
+            // 3. Configurar Modal
+            resultModal.classList.add('hidden');
+            resultModal.classList.remove('flex');
+            document.querySelector('#result-modal > div').classList.add('scale-90');
+        }
+
+        // Listener para el botón de Reinicio
+        resetButton.addEventListener('click', initializeGame);
+
+        // Listener para cerrar el modal
+        closeModal.addEventListener('click', () => {
+            resultModal.classList.add('hidden');
+            resultModal.classList.remove('flex');
+            document.querySelector('#result-modal > div').classList.add('scale-90');
+        });
+
+        // Inicializar el juego al cargar la página
+        window.onload = initializeGame;
+
+    </script>
+</body>
+</html>
