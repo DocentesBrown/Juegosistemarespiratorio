@@ -12,61 +12,54 @@
             font-family: 'Inter', sans-serif;
             background-color: #f0f9ff; /* Azul muy claro */
         }
-        /* Estilos base para las zonas de arrastre */
+        /* Estilos base para las zonas de arrastre (ahora son solo marcadores invisibles) */
         .drop-zone {
             position: absolute;
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 2px dashed #00bfff; /* Borde de zona de espera */
+            /* Hacemos la zona casi transparente, solo como límite de colisión */
+            background-color: rgba(0, 191, 255, 0.05); 
+            border: 1px dotted #00bfff; /* Borde muy sutil para delimitar visualmente si se desea */
             border-radius: 12px;
+            pointer-events: none; /* No interactúan con el ratón */
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.8rem;
-            color: #1e40af;
             text-align: center;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-        }
-        /* Estilo al pasar el ratón por encima de una zona de arrastre */
-        .drop-zone.hover {
-            background-color: rgba(0, 191, 255, 0.2);
-            border-color: #00bfff;
+            opacity: 0.5; /* Mantener una ligera visibilidad como guía de debugging/colisión */
         }
         /* Estilo para las etiquetas arrastrables */
         .draggable-item {
             cursor: grab;
             user-select: none;
             padding: 0.5rem 1rem;
-            margin: 0.5rem;
+            /* Usamos 'inline-block' para que el transform funcione correctamente */
+            display: inline-block; 
+            margin: 0; /* Aseguramos que no tenga margen cuando se posiciona absolutamente */
             background-color: #3b82f6; /* Azul primario */
             color: white;
             border-radius: 9999px; /* Píldora */
             font-weight: 600;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.15s ease-out, background-color 0.3s;
+            transition: transform 0.15s ease-out, background-color 0.3s, box-shadow 0.3s, border 0.3s;
+            border: 2px solid transparent; /* Para el feedback de chequeo */
         }
         .draggable-item:active {
             transform: scale(0.95);
             cursor: grabbing;
         }
-        /* Estilos de retroalimentación */
+        /* Estilos de retroalimentación aplicados solo después del "Chequear Resultados" */
         .correct {
             background-color: #34d399 !important; /* Verde */
             border-color: #059669 !important;
-            color: white !important;
-            animation: pulse-green 0.5s 1;
+            box-shadow: 0 4px 10px rgba(52, 211, 153, 0.5);
         }
         .incorrect {
             background-color: #f87171 !important; /* Rojo */
             border-color: #ef4444 !important;
             animation: shake 0.5s;
+            box-shadow: 0 4px 10px rgba(248, 113, 113, 0.5);
         }
-        .hidden-label {
-            opacity: 0;
-            pointer-events: none;
-            transform: scale(0);
-        }
-
         /* Animación para retroalimentación visual */
         @keyframes pulse-green {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
@@ -98,7 +91,7 @@
                 ¡Evalúa tu Conocimiento del Sistema Respiratorio!
             </h1>
             <p class="text-lg text-gray-500">
-                Arrastra y suelta cada parte anatómica a su ubicación correcta en el diagrama.
+                Arrastra y suelta cada parte anatómica a la zona del diagrama. Luego presiona "Chequear Resultados".
             </p>
             <div id="score-display" class="mt-4 text-xl font-bold text-blue-600">
                 Aciertos: 0 / 7
@@ -107,58 +100,58 @@
 
         <div id="game-area" class="flex flex-col lg:flex-row gap-8">
             
-            <!-- 1. Contenedor del Diagrama (Drop Zones) -->
-            <div id="diagram-container" class="relative flex-shrink-0 w-full lg:w-1/2 h-96 lg:h-[500px] bg-gray-100 rounded-xl shadow-inner p-2 border-2 border-gray-300">
+            <!-- 1. Contenedor del Diagrama (Drop Zones - Ahora pasivos) -->
+            <div id="diagram-container" 
+                 class="relative flex-shrink-0 w-full lg:w-1/2 h-96 lg:h-[500px] bg-gray-100 rounded-xl shadow-inner p-2 border-2 border-gray-300"
+                 ondragover="handleDragOver(event)"
+                 ondrop="handleDrop(event)">
                 
                 <!-- Imagen/Placeholder del Diagrama -->
                 <img src="https://placehold.co/400x500/A0E7E5/000000?text=Diagrama+del+Sistema+Respiratorio" 
                      alt="Diagrama esquemático del sistema respiratorio" 
                      class="w-full h-full object-contain rounded-lg pointer-events-none">
 
-                <!-- ZONAS DE ARRASTRE (Drop Zones) - Posicionadas sobre la imagen (adaptar si se cambia la imagen) -->
+                <!-- ZONAS OBJETIVO (Drop Zones) - NO visibles, solo para chequear colisiones -->
+                <!-- Nota: El pointer-events:none en CSS evita que capturen el evento drop -->
                 
                 <!-- Nariz / Nasal Cavity (Superior entrada de aire) -->
-                <div id="zone-nariz" data-target="Nariz" class="drop-zone w-24 h-8 top-5 left-1/2 -translate-x-1/2">Nariz</div>
+                <div id="zone-nariz" data-target="Nariz" class="drop-zone w-24 h-8 top-5 left-1/2 -translate-x-1/2"></div>
                 
                 <!-- Faringe / Pharynx (Garganta/zona detrás de la nariz) -->
-                <div id="zone-faringe" data-target="Faringe" class="drop-zone w-24 h-8 top-16 left-1/2 -translate-x-1/2">Faringe</div>
+                <div id="zone-faringe" data-target="Faringe" class="drop-zone w-24 h-8 top-16 left-1/2 -translate-x-1/2"></div>
                 
                 <!-- Laringe / Larynx (Caja de voz, arriba de la tráquea) -->
-                <div id="zone-laringe" data-target="Laringe" class="drop-zone w-24 h-8 top-32 left-1/2 -translate-x-1/2">Laringe</div>
+                <div id="zone-laringe" data-target="Laringe" class="drop-zone w-24 h-8 top-32 left-1/2 -translate-x-1/2"></div>
                 
                 <!-- Tráquea / Trachea (Tubo central) -->
-                <div id="zone-traquea" data-target="Tráquea" class="drop-zone w-32 h-8 top-48 left-1/2 -translate-x-1/2">Tráquea</div>
+                <div id="zone-traquea" data-target="Tráquea" class="drop-zone w-32 h-8 top-48 left-1/2 -translate-x-1/2"></div>
 
                 <!-- Bronquios / Bronchi (Ramificaciones dentro del pulmón) -->
-                <div id="zone-bronquios" data-target="Bronquios" class="drop-zone w-28 h-8 top-64 left-1/4">Bronquios</div>
+                <div id="zone-bronquios" data-target="Bronquios" class="drop-zone w-28 h-8 top-64 left-1/4"></div>
                 
                 <!-- Pulmones / Lungs (El órgano principal, lateral) -->
-                <div id="zone-pulmones" data-target="Pulmones" class="drop-zone w-28 h-8 top-72 right-1/4">Pulmones</div>
+                <div id="zone-pulmones" data-target="Pulmones" class="drop-zone w-28 h-8 top-72 right-1/4"></div>
 
                 <!-- Diafragma / Diaphragm (Músculo inferior) -->
-                <div id="zone-diafragma" data-target="Diafragma" class="drop-zone w-32 h-8 bottom-5 left-1/2 -translate-x-1/2">Diafragma</div>
-
+                <div id="zone-diafragma" data-target="Diafragma" class="drop-zone w-32 h-8 bottom-5 left-1/2 -translate-x-1/2"></div>
+                
             </div>
 
             <!-- 2. Contenedor de Etiquetas (Draggable Items) -->
             <div class="lg:w-1/2 w-full">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Etiquetas disponibles:</h2>
-                <div id="labels-container" class="flex flex-wrap gap-2 justify-center lg:justify-start">
+                <div id="labels-container" class="flex flex-wrap gap-2 justify-center lg:justify-start min-h-[100px] border-b pb-4 mb-4">
                     
-                    <!-- Elementos Arrastrables -->
-                    <div id="Nariz" data-name="Nariz" draggable="true" class="draggable-item">Nariz</div>
-                    <div id="Faringe" data-name="Faringe" draggable="true" class="draggable-item">Faringe</div>
-                    <div id="Laringe" data-name="Laringe" draggable="true" class="draggable-item">Laringe</div>
-                    <div id="Tráquea" data-name="Tráquea" draggable="true" class="draggable-item">Tráquea</div>
-                    <div id="Bronquios" data-name="Bronquios" draggable="true" class="draggable-item">Bronquios</div>
-                    <div id="Pulmones" data-name="Pulmones" draggable="true" class="draggable-item">Pulmones</div>
-                    <div id="Diafragma" data-name="Diafragma" draggable="true" class="draggable-item">Diafragma</div>
+                    <!-- Elementos Arrastrables (serán generados por JS) -->
                     
                 </div>
                 
-                <!-- Botón de Reinicio -->
-                <div class="mt-8 text-center lg:text-left">
-                    <button id="reset-button" class="px-6 py-2 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-full shadow-lg transition duration-200">
+                <!-- Botón de Chequeo y Reinicio -->
+                <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <button id="check-button" class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full shadow-lg transition duration-200 uppercase tracking-wider">
+                        Chequear Resultados
+                    </button>
+                    <button id="reset-button" class="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-full shadow-lg transition duration-200 uppercase tracking-wider">
                         Reiniciar Juego
                     </button>
                 </div>
@@ -184,10 +177,14 @@
         let draggedItem = null;
         let correctCount = 0;
         const totalItems = 7;
+        let placedLabels = []; // [{ id: 'Nariz', element: HTMLElement, x: 0, y: 0 }]
+        
         const scoreDisplay = document.getElementById('score-display');
         const labelsContainer = document.getElementById('labels-container');
+        const diagramContainer = document.getElementById('diagram-container');
         const dropZones = document.querySelectorAll('.drop-zone');
         const resetButton = document.getElementById('reset-button');
+        const checkButton = document.getElementById('check-button'); // Nuevo botón
         const resultModal = document.getElementById('result-modal');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
@@ -202,8 +199,9 @@
         function handleDragStart(e) {
             draggedItem = e.target;
             e.dataTransfer.setData('text/plain', e.target.dataset.name);
+            // Hacer que el elemento sea arrastrable y visible temporalmente
             setTimeout(() => {
-                e.target.classList.add('opacity-50'); // Reduce opacidad del original
+                e.target.classList.add('opacity-50'); 
             }, 0);
         }
 
@@ -217,121 +215,211 @@
         }
 
         /**
-         * Maneja cuando el arrastrable entra en la zona.
-         * @param {DragEvent} e 
-         */
-        function handleDragEnter(e) {
-            e.target.classList.add('hover');
-        }
-
-        /**
-         * Maneja cuando el arrastrable sale de la zona.
-         * @param {DragEvent} e 
-         */
-        function handleDragLeave(e) {
-            e.target.classList.remove('hover');
-        }
-
-        /**
-         * Maneja la acción de soltar el elemento.
+         * Maneja la acción de soltar el elemento en el diagrama.
          * @param {DragEvent} e 
          */
         function handleDrop(e) {
             e.preventDefault();
-            const dropZone = e.currentTarget;
-            const targetName = dropZone.dataset.target;
-            const draggedName = e.dataTransfer.getData('text/plain');
+            
+            if (!draggedItem) return;
 
-            // Limpiar estilos hover
-            dropZone.classList.remove('hover');
+            // Limpiar opacidad
             draggedItem.classList.remove('opacity-50');
 
-            // Verificar si la zona ya está llena o si el arrastre es válido
-            if (dropZone.dataset.filled === 'true') {
-                // Ya hay un elemento, ignorar
-                showFeedback(false, dropZone);
-                return;
+            // 1. Calcular coordenadas relativas (porcentaje del contenedor)
+            const containerRect = diagramContainer.getBoundingClientRect();
+            
+            // Posición del ratón/touch relativa al contenedor
+            let x = e.clientX - containerRect.left;
+            let y = e.clientY - containerRect.top;
+            
+            // Convertir a porcentaje para mantener la posición si se redimensiona
+            let xPercent = (x / containerRect.width) * 100;
+            let yPercent = (y / containerRect.height) * 100;
+
+            // 2. Establecer estilos absolutos y centrar
+            draggedItem.style.position = 'absolute';
+            draggedItem.style.left = `${xPercent}%`;
+            draggedItem.style.top = `${yPercent}%`;
+            // Centrar el elemento en el punto donde se soltó el ratón
+            draggedItem.style.transform = 'translate(-50%, -50%)'; 
+            
+            // 3. Mover el elemento al contenedor del diagrama
+            if (draggedItem.parentNode !== diagramContainer) {
+                // Quitar de donde estaba (labels-container) y ponerlo en diagram-container
+                diagramContainer.appendChild(draggedItem);
             }
+            
+            // 4. Actualizar el registro de etiquetas colocadas
+            const existingIndex = placedLabels.findIndex(label => label.id === draggedItem.id);
+            
+            // Eliminar cualquier feedback visual previo
+            draggedItem.classList.remove('correct', 'incorrect');
 
-            // Lógica de acierto/error
-            if (draggedName === targetName) {
-                // --- CORRECTO ---
-                
-                // 1. Marcar la zona como correcta y ocupada
-                dropZone.classList.add('correct');
-                dropZone.classList.remove('incorrect');
-                dropZone.dataset.filled = 'true';
-                
-                // 2. Mover la etiqueta arrastrada a la posición de la zona
-                draggedItem.style.position = 'absolute';
-                draggedItem.style.top = '0';
-                draggedItem.style.left = '0';
-                draggedItem.style.margin = '0';
-                draggedItem.classList.remove('draggable-item'); // Quitar estilos de arrastrable
+            const newLabelData = {
+                id: draggedItem.id,
+                element: draggedItem,
+                x: xPercent, // %
+                y: yPercent, // %
+            };
 
-                // 3. Reemplazar el contenido de la zona con la etiqueta
-                dropZone.innerHTML = ''; 
-                dropZone.appendChild(draggedItem);
-
-                // 4. Deshabilitar futuras interacciones con este elemento
-                draggedItem.setAttribute('draggable', 'false');
-                draggedItem.removeEventListener('dragstart', handleDragStart);
-
-                // 5. Actualizar la puntuación
-                correctCount++;
-                updateScore();
-                
-                showFeedback(true, dropZone);
-
+            if (existingIndex !== -1) {
+                placedLabels[existingIndex] = newLabelData;
             } else {
-                // --- INCORRECTO ---
-                showFeedback(false, dropZone);
+                placedLabels.push(newLabelData);
             }
+            
+            // Limpiar la referencia
+            draggedItem = null; 
+            
+            // Opcional: Actualizar el contador de elementos colocados
+            updateScore(placedLabels.length, totalItems);
+        }
+        
+        // La retroalimentación inmediata (handleDragEnter/Leave) ya no se usa
+
+        /**
+         * Verifica si un punto (x, y) está dentro del rectángulo de destino.
+         * Se utiliza la colisión por coordenadas relativas/porcentuales.
+         * @param {number} pointX - X de la etiqueta colocada (centro) en %
+         * @param {number} pointY - Y de la etiqueta colocada (centro) en %
+         * @param {HTMLElement} targetZone - El elemento drop-zone
+         * @returns {boolean} Si la etiqueta está dentro de la zona.
+         */
+        function isPointInTargetZone(pointX, pointY, targetZone) {
+            // Extraer las posiciones y dimensiones del CSS (que son en %)
+            const topStr = targetZone.style.top || targetZone.classList.value.match(/top-(\d+)/)?.[1] + '%' || '0%';
+            const leftStr = targetZone.style.left || targetZone.classList.value.match(/left-(\d+)\/(\d+)/)?.[0].replace('left-', '').replace('/', '*100/') + '%' || '0%';
+            const widthStr = targetZone.style.width || targetZone.classList.value.match(/w-(\d+)/)?.[1] + 'rem' || '0rem';
+            const heightStr = targetZone.style.height || targetZone.classList.value.match(/h-(\d+)/)?.[1] + 'rem' || '0rem';
+
+            // Usar una función helper para obtener los valores CSS basados en las clases Tailwind
+            const getRelativeValue = (element, key, defaultValue) => {
+                const classValue = element.className.split(' ').find(cls => cls.startsWith(key));
+                if (!classValue) return defaultValue;
+                
+                const val = classValue.substring(key.length);
+                if (val.includes('/')) {
+                    // Manejar fracciones como 1/2
+                    const [num, den] = val.split('/').map(n => parseInt(n, 10));
+                    return (num / den) * 100;
+                }
+                // Manejar valores fijos o porcentajes simples (ej: top-5, w-24, left-1/2)
+                if (key === 'w' || key === 'h') {
+                    // Para width/height no podemos usar % del CSS, así que mejor usar un factor fijo (ej: 10)
+                    // Como las zonas son fijas, usaremos un margen de tolerancia grande
+                    return 15; // Aproximadamente 15% de ancho/alto relativo
+                }
+
+                // Para top y left, usamos la posición en % o clases específicas como translate
+                if (key === 'top') return parseFloat(val);
+                if (key === 'bottom') return 100 - parseFloat(val);
+                if (key === 'left') {
+                    if (val === '1/2') return 50;
+                    if (val === '1/4') return 25;
+                    if (val.includes('-translate-x-1/2')) return 50; // Ajuste por translate center
+                    return parseFloat(val);
+                }
+                if (key === 'right') return 100 - parseFloat(val);
+                
+                return defaultValue;
+            };
+
+            // Calcular el centro y dimensiones aproximadas de la zona en % (basado en el CSS)
+            // Esto es impreciso, por eso usamos el bounding box real en checkResults
+            const rect = targetZone.getBoundingClientRect();
+            const containerRect = diagramContainer.getBoundingClientRect();
+            
+            const x1 = (rect.left - containerRect.left) / containerRect.width * 100;
+            const y1 = (rect.top - containerRect.top) / containerRect.height * 100;
+            const x2 = x1 + rect.width / containerRect.width * 100;
+            const y2 = y1 + rect.height / containerRect.height * 100;
+
+            // Definir un margen de error/tolerancia para la colisión (en %)
+            // Esto es crucial para la jugabilidad en modo libre
+            const tolerance = 6; 
+
+            return (
+                pointX >= x1 - tolerance && 
+                pointX <= x2 + tolerance && 
+                pointY >= y1 - tolerance && 
+                pointY <= y2 + tolerance
+            );
         }
 
         /**
-         * Muestra una retroalimentación visual (rojo/verde)
-         * @param {boolean} isCorrect 
-         * @param {HTMLElement} element 
+         * Función que se ejecuta al presionar "Chequear Resultados".
          */
-        function showFeedback(isCorrect, element) {
-            if (isCorrect) {
-                // La retroalimentación de éxito es la clase 'correct' aplicada en handleDrop
-            } else {
-                // Retroalimentación de error: animar la zona de arrastre
-                element.classList.add('incorrect');
-                setTimeout(() => {
-                    element.classList.remove('incorrect');
-                }, 500);
+        function checkResults() {
+            if (placedLabels.length === 0) {
+                 showResultModal(false, "No has colocado ninguna etiqueta aún. ¡Arrastra las partes al diagrama!", "red");
+                 return;
             }
-        }
 
-        /**
-         * Actualiza el contador de aciertos y verifica la victoria.
-         */
-        function updateScore() {
-            scoreDisplay.textContent = `Aciertos: ${correctCount} / ${totalItems}`;
+            let score = 0;
+            
+            placedLabels.forEach(labelData => {
+                const { id, element, x, y } = labelData;
+                
+                // Encontrar la zona de destino correcta (target)
+                const targetZone = document.querySelector(`.drop-zone[data-target="${id}"]`);
+                
+                if (!targetZone) return; 
 
+                // Usamos la función de chequeo de colisión
+                const isCorrect = isPointInTargetZone(x, y, targetZone);
+
+                // Aplicar feedback visual
+                element.classList.remove('correct', 'incorrect');
+                if (isCorrect) {
+                    element.classList.add('correct');
+                    score++;
+                } else {
+                    element.classList.add('incorrect');
+                }
+            });
+
+            correctCount = score;
+            updateScore(correctCount, totalItems);
+            
+            // Mostrar modal de resultado
             if (correctCount === totalItems) {
-                // Juego completado
                 showResultModal(true);
+            } else {
+                showResultModal(false, `Tienes ${correctCount} de ${totalItems} correctos. Revisa las etiquetas rojas y vuelve a colocarlas.`, "orange");
             }
+        }
+
+        /**
+         * Actualiza el contador de aciertos.
+         */
+        function updateScore(current, total) {
+            scoreDisplay.textContent = `Aciertos: ${current} / ${total}`;
         }
 
         /**
          * Muestra el modal de resultado final.
          * @param {boolean} isWin 
+         * @param {string} [customMessage] - Mensaje a mostrar si no es victoria
+         * @param {string} [color] - 'green', 'red', 'orange'
          */
-        function showResultModal(isWin) {
+        function showResultModal(isWin, customMessage = null, color = null) {
             if (isWin) {
                 modalTitle.textContent = "¡Felicidades, Evaluación Superada!";
                 modalMessage.textContent = "¡Has etiquetado correctamente todas las partes del sistema respiratorio! Tu precisión es del 100%.";
-                modalTitle.classList.replace('text-red-600', 'text-green-600');
+                modalTitle.classList.remove('text-red-600', 'text-orange-600');
+                modalTitle.classList.add('text-green-600');
             } else {
-                // Esto solo se usaría si tuviéramos un botón de 'terminar' incompleto
                 modalTitle.textContent = "Resultado Parcial";
-                modalMessage.textContent = `Tienes ${correctCount} de ${totalItems} correctos. ¡Sigue practicando!`;
-                modalTitle.classList.replace('text-green-600', 'text-red-600');
+                modalMessage.textContent = customMessage || "Aún te faltan partes por colocar o algunas están incorrectas.";
+                
+                // Configurar color del título
+                modalTitle.classList.remove('text-green-600');
+                if (color === "red") {
+                     modalTitle.classList.add('text-red-600');
+                } else {
+                     modalTitle.classList.add('text-orange-600');
+                }
             }
             resultModal.classList.remove('hidden');
             resultModal.classList.add('flex');
@@ -347,17 +435,10 @@
         function initializeGame() {
             // Reiniciar contadores y estado
             correctCount = 0;
-            updateScore();
+            placedLabels = [];
+            updateScore(0, totalItems);
 
-            // 1. Configurar Draggable Items
-            const draggableItems = document.querySelectorAll('.draggable-item');
-            
-            // Si ya hay elementos, remover listeners antes de reasignarlos (para el reset)
-            draggableItems.forEach(item => {
-                item.removeEventListener('dragstart', handleDragStart);
-            });
-
-            // Recrear los elementos arrastrables para restaurar el estado DOM
+            // 1. Recrear los elementos arrastrables para restaurar el estado DOM
             labelsContainer.innerHTML = '';
             const labelsData = [
                 { id: "Nariz", name: "Nariz" },
@@ -377,33 +458,41 @@
                 div.setAttribute('draggable', 'true');
                 div.className = 'draggable-item';
                 div.textContent = data.name;
+                div.style.position = ''; // Limpiar estilos absolutos si existían
+                div.style.left = '';
+                div.style.top = '';
+                div.style.transform = '';
+                div.classList.remove('correct', 'incorrect');
+                
                 div.addEventListener('dragstart', handleDragStart);
                 labelsContainer.appendChild(div);
             });
             
-            // 2. Configurar Drop Zones
+            // 2. Mover todos los elementos que quedaron en el diagrama de vuelta a labelsContainer
             dropZones.forEach(zone => {
-                zone.removeEventListener('dragover', handleDragOver);
-                zone.removeEventListener('drop', handleDrop);
-                zone.removeEventListener('dragenter', handleDragEnter);
-                zone.removeEventListener('dragleave', handleDragLeave);
-
-                zone.addEventListener('dragover', handleDragOver);
-                zone.addEventListener('drop', handleDrop);
-                zone.addEventListener('dragenter', handleDragEnter);
-                zone.addEventListener('dragleave', handleDragLeave);
-
-                // Limpiar estilos y estado de la zona
-                zone.classList.remove('correct', 'incorrect');
-                zone.dataset.filled = 'false';
-                zone.innerHTML = zone.dataset.target; // Restaurar texto original (la parte a etiquetar)
+                 zone.innerHTML = ''; // Limpia el contenido de las zonas si algo se pegó accidentalmente
             });
+            
+            // Recoger cualquier etiqueta que se haya quedado en el diagrama y reinsertarla
+            const currentLabels = diagramContainer.querySelectorAll('.draggable-item');
+            currentLabels.forEach(label => {
+                labelsContainer.appendChild(label);
+                label.style.position = ''; 
+                label.style.left = '';
+                label.style.top = '';
+                label.style.transform = '';
+                label.classList.remove('correct', 'incorrect');
+            });
+
 
             // 3. Configurar Modal
             resultModal.classList.add('hidden');
             resultModal.classList.remove('flex');
             document.querySelector('#result-modal > div').classList.add('scale-90');
         }
+
+        // Listener para el botón de Chequeo
+        checkButton.addEventListener('click', checkResults);
 
         // Listener para el botón de Reinicio
         resetButton.addEventListener('click', initializeGame);
